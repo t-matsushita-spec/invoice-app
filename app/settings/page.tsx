@@ -25,18 +25,20 @@ export default async function SettingsPage() {
 
   // DBエラーまたはレコードが存在しない場合
   if (error || !data) {
+    let errorText = '予期しないエラーが発生しました。'
+
+    if (error?.message?.includes('JSON')) {
+      errorText = '設定レコードが見つかりません。初期設定データを挿入してください。'
+    } else if (error?.message?.includes('connection')) {
+      errorText = 'Supabase に接続できません。接続情報を確認してください。'
+    }
+
     return (
       <div className="p-6 bg-red-50 border border-red-200 rounded-lg max-w-2xl">
         <h2 className="text-red-700 font-bold mb-2">データ取得エラー</h2>
         <p className="text-red-600 text-sm">
-          設定データを取得できませんでした。<br />
-          Supabaseの接続情報と、settingsテーブルに初期レコードがあるか確認してください。
+          {errorText}
         </p>
-        {error && (
-          <pre className="mt-2 text-xs text-red-400 bg-red-100 p-2 rounded">
-            {error.message}
-          </pre>
-        )}
       </div>
     )
   }
