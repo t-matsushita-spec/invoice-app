@@ -3,9 +3,6 @@
 // Supabase Auth による新規登録画面
 // メール・パスワードで新しいアカウントを作成
 
-// MiddleWare でリダイレクトするため、このページを動的にレンダリング
-export const dynamic = 'force-dynamic'
-
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
