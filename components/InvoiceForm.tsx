@@ -296,9 +296,16 @@ export default function InvoiceForm({
         savedInvoiceId = invoice.id
       } else {
         // ===== 新規作成モード =====
+        // user_id を取得して payload に追加（RLS対応）
+        const { data: { user }, error: userError } = await supabase.auth.getUser()
+        if (userError || !user) {
+          toast.error('ユーザー認証が必要です。ログインしてください。')
+          return
+        }
+
         const { data: newInvoice, error: insertError } = await supabase
           .from('invoices')
-          .insert(invoicePayload)
+          .insert({ ...invoicePayload, user_id: user.id })
           .select('id')
           .single()
         if (insertError) {

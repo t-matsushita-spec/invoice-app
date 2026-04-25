@@ -115,9 +115,16 @@ export default function ClientForm({ client }: ClientFormProps) {
         toast.success('取引先を更新しました')
       } else {
         // 新規作成モード：INSERT
+        // user_id を取得して payload に追加（RLS対応）
+        const { data: { user }, error: userError } = await supabase.auth.getUser()
+        if (userError || !user) {
+          toast.error('ユーザー認証が必要です。ログインしてください。')
+          return
+        }
+
         const { error } = await supabase
           .from('clients')
-          .insert(payload)
+          .insert({ ...payload, user_id: user.id })
         if (error) throw error
         toast.success('取引先を登録しました')
       }

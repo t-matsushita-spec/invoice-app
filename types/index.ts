@@ -27,6 +27,7 @@ export type SettingsUpdate = Omit<Settings, 'id' | 'created_at' | 'updated_at' |
 // ==============================
 export type Client = {
   id: string
+  user_id: string                   // RLS対応：ユーザーID
   name: string                      // 取引先名（必須）
   postal_code: string | null
   address: string | null
@@ -44,6 +45,7 @@ export type InvoiceStatus = 'draft' | 'sent' | 'paid'
 
 export type Invoice = {
   id: string
+  user_id: string                   // RLS対応：ユーザーID
   invoice_number: string            // 請求書番号（例: INV-2024-001）
   client_id: string | null
   issue_date: string                // 発行日（ISO文字列）
