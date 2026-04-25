@@ -4,7 +4,11 @@
 'use client' // usePathnameはクライアント側のフックなので必要
 
 import Link from 'next/link'
-import { usePathname } from 'next/navigation'
+import { usePathname, useRouter } from 'next/navigation'
+import { useState } from 'react'
+import { toast } from 'sonner'
+import { createClient } from '@/lib/supabase/client'
+import { Button } from '@/components/ui/button'
 
 // ナビゲーションメニューの項目の型定義
 type NavItem = {
@@ -32,6 +36,27 @@ const navItems: NavItem[] = [
 export default function Sidebar() {
   // 現在のURLパスを取得（アクティブメニューの強調表示に使用）
   const pathname = usePathname()
+  const router = useRouter()
+  const [isLoggingOut, setIsLoggingOut] = useState(false)
+
+  // ログアウト処理
+  const handleLogout = async () => {
+    setIsLoggingOut(true)
+    try {
+      const supabase = createClient()
+      const { error } = await supabase.auth.signOut()
+      if (error) throw error
+
+      toast.success('ログアウトしました')
+      router.push('/auth/login')
+      router.refresh()
+    } catch (err) {
+      console.error('ログアウトエラー:', err)
+      toast.error('ログアウトに失敗しました')
+    } finally {
+      setIsLoggingOut(false)
+    }
+  }
 
   return (
     <aside
@@ -77,8 +102,16 @@ export default function Sidebar() {
         </ul>
       </nav>
 
-      {/* フッター：バージョン情報など */}
-      <div className="p-4 border-t border-white/20">
+      {/* フッター：ログアウトボタン */}
+      <div className="p-4 border-t border-white/20 space-y-3">
+        <Button
+          onClick={handleLogout}
+          disabled={isLoggingOut}
+          className="w-full bg-red-600 hover:bg-red-700 text-white"
+          size="sm"
+        >
+          {isLoggingOut ? 'ログアウト中...' : 'ログアウト'}
+        </Button>
         <p className="text-white/40 text-xs text-center">v1.0.0</p>
       </div>
     </aside>
