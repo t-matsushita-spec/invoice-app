@@ -1,6 +1,7 @@
 // トップページ = 請求書一覧（Server Component）
 // Supabaseから請求書を取引先JOINで全件取得してClient Componentに渡す
 
+import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
 import { Button } from '@/components/ui/button'
@@ -8,6 +9,14 @@ import InvoiceListClient from './InvoiceListClient'
 
 export default async function HomePage() {
   const supabase = await createClient()
+
+  // 認証チェック
+  const { data: { user }, error: authError } = await supabase.auth.getUser()
+
+  if (authError || !user) {
+    // 認証なし → ログイン画面へリダイレクト
+    redirect('/auth/login')
+  }
 
   // 請求書を取引先名JOINで全件取得
   // select内の 'clients(name)' がSupabaseの外部キーJOIN記法
