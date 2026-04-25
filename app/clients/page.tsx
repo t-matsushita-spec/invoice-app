@@ -1,6 +1,7 @@
 // 取引先一覧ページ（Server Component）
 // Supabaseから取引先を全件取得してClient Componentに渡す
 
+import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
 import { Button } from '@/components/ui/button'
@@ -9,6 +10,12 @@ import type { Client } from '@/types'
 
 export default async function ClientsPage() {
   const supabase = await createClient()
+
+  // 認証チェック
+  const { data: { user }, error: authError } = await supabase.auth.getUser()
+  if (authError || !user) {
+    redirect('/auth/login')
+  }
 
   // 作成日時の降順で全件取得
   const { data, error } = await supabase

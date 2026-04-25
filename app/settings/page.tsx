@@ -1,6 +1,7 @@
 // 設定ページ（Server Component）
 // Supabaseからデータを取得してフォームコンポーネントに渡す
 
+import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import SettingsForm from './SettingsForm'
 import type { Settings } from '@/types'
@@ -16,6 +17,12 @@ import type { Settings } from '@/types'
  */
 export default async function SettingsPage() {
   const supabase = await createClient()
+
+  // 認証チェック
+  const { data: { user }, error: authError } = await supabase.auth.getUser()
+  if (authError || !user) {
+    redirect('/auth/login')
+  }
 
   // settingsテーブルから1件取得（このアプリは常に1レコード）
   const { data, error } = await supabase
