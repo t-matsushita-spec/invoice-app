@@ -3,7 +3,7 @@
 // 請求書フォーム共通コンポーネント
 // 新規作成・編集の両方で使う。明細の追加・削除・リアルタイム計算を管理する。
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useId } from 'react'
 import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
 import { createClient } from '@/lib/supabase/client'
@@ -90,8 +90,13 @@ const nextMonthEnd = (): string => {
 }
 
 // ユニークなローカルIDを生成（React keyに使用）
-const generateLocalId = (): string =>
-  Math.random().toString(36).slice(2)
+// Hydration エラー回避：サーバー・クライアント双方で同じ ID を生成するため、
+// タイムスタンプとセッション内カウンターを使用
+let localIdCounter = 0
+const generateLocalId = (): string => {
+  localIdCounter++
+  return `local-${localIdCounter}`
+}
 
 // 空の明細行を生成
 const emptyRow = (): ItemRow => ({
@@ -138,7 +143,7 @@ export default function InvoiceForm({
       return existingItems
         .sort((a, b) => a.sort_order - b.sort_order)
         .map((item) => ({
-          localId: generateLocalId(),
+          localId: item.id, // Hydration エラー回避：既存データの id を使用
           description: item.description,
           quantity: item.quantity,
           unit: item.unit,
@@ -150,8 +155,8 @@ export default function InvoiceForm({
     }
     if (copyData?.items && copyData.items.length > 0) {
       // コピー時は明細をそのまま引き継ぐ
-      return copyData.items.map((item) => ({
-        localId: generateLocalId(),
+      return copyData.items.map((item, index) => ({
+        localId: `copy-${index}`, // コピー時は安定した ID を使用
         ...item,
         taxIncluded: false,
         taxIncludedInput: item.unit_price,
