@@ -181,8 +181,24 @@ export default function InvoiceForm({
   // 「明細を変えたら合計も変わる」という依存関係を明示できる。
   // useEffectの依存配列[items]が重要で、itemsが変わるたびだけ実行される。
   useEffect(() => {
-    const newSubtotal = items.reduce((sum, item) => sum + item.amount, 0)
-    const newTax = Math.floor(newSubtotal * 0.1)  // 小数点以下切り捨て
+    let newSubtotal = 0
+    let newTax = 0
+
+    items.forEach((item) => {
+      if (item.taxIncluded) {
+        // 税込入力モード：掛け算してから逆算
+        const taxIncludedAmount = item.taxIncludedInput * item.quantity
+        const taxExcludedAmount = Math.round(taxIncludedAmount / 1.1)
+        const itemTax = taxIncludedAmount - taxExcludedAmount
+        newSubtotal += taxExcludedAmount
+        newTax += itemTax
+      } else {
+        // 税抜入力モード：既存ロジック
+        newSubtotal += item.amount
+        newTax += Math.round(item.amount * 0.1)
+      }
+    })
+
     setSubtotal(newSubtotal)
     setTaxAmount(newTax)
     setTotalAmount(newSubtotal + newTax)
@@ -239,18 +255,16 @@ export default function InvoiceForm({
     []
   )
 
-  // 税込入力欄専用のハンドラー（unit_price と taxIncludedInput を同時更新）
+  // 税込入力欄専用のハンドラー（taxIncludedInput を更新、計算は useEffect で行う）
   const handleTaxIncludedPriceChange = useCallback(
     (index: number, taxIncludedValue: number) => {
       setItems((prev) =>
         prev.map((item, i) => {
           if (i !== index) return item
-          const taxExcludedPrice = Math.floor(taxIncludedValue / 1.1)
           return {
             ...item,
             taxIncludedInput: taxIncludedValue,
-            unit_price: taxExcludedPrice,
-            amount: item.quantity * taxExcludedPrice,
+            // amountはuseEffectで計算するため、ここでは更新しない
           }
         })
       )
@@ -577,14 +591,21 @@ export default function InvoiceForm({
                       </div>
                       {item.taxIncluded && (
                         <p className="text-xs text-amber-600">
-                          （税抜: ¥{formatCurrency(item.unit_price)}）
+                          （税抜小計: ¥{formatCurrency(
+                            Math.round((item.taxIncludedInput * item.quantity) / 1.1)
+                          )}）
                         </p>
                       )}
                     </div>
                   </td>
                   {/* 金額（自動計算・読み取り専用） */}
                   <td className="px-3 py-2 text-right font-medium text-gray-700">
-                    ¥{formatCurrency(item.amount)}
+                    ¥
+                    {formatCurrency(
+                      item.taxIncluded
+                        ? item.taxIncludedInput * item.quantity
+                        : item.amount
+                    )}
                   </td>
                   {/* 削除ボタン */}
                   <td className="px-3 py-2 text-center">
