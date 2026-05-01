@@ -150,6 +150,7 @@ export default async function InvoiceDetailPage({ params }: PageProps) {
                 <td className="px-4 py-2.5 text-right text-gray-600">{item.quantity}</td>
                 <td className="px-4 py-2.5 text-gray-600">{item.unit}</td>
                 <td className="px-4 py-2.5 text-right text-gray-600">
+                  {item.tax_included && <span className="text-xs text-amber-600">税込 </span>}
                   {formatCurrency(item.unit_price)}
                 </td>
                 <td className="px-4 py-2.5 text-right font-medium text-gray-800">

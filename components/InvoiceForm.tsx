@@ -145,9 +145,7 @@ export default function InvoiceForm({
           unit_price: item.unit_price,
           amount: item.amount,
           taxIncluded: item.tax_included ?? false,
-          taxIncludedInput: item.tax_included
-            ? Math.round(item.unit_price * 1.1)
-            : item.unit_price,
+          taxIncludedInput: item.unit_price, // 税込モード時は unit_price が既に税込価格のため、再計算しない
         }))
     }
     if (copyData?.items && copyData.items.length > 0) {
@@ -186,8 +184,8 @@ export default function InvoiceForm({
 
     items.forEach((item) => {
       if (item.taxIncluded) {
-        // 税込入力モード：掛け算してから逆算
-        const taxIncludedAmount = item.taxIncludedInput * item.quantity
+        // 税込入力モード：unit_price は既に税込価格のため、そのまま計算
+        const taxIncludedAmount = item.unit_price * item.quantity
         const taxExcludedAmount = Math.round(taxIncludedAmount / 1.1)
         const itemTax = taxIncludedAmount - taxExcludedAmount
         newSubtotal += taxExcludedAmount
@@ -255,7 +253,7 @@ export default function InvoiceForm({
     []
   )
 
-  // 税込入力欄専用のハンドラー（taxIncludedInput を更新、計算は useEffect で行う）
+  // 税込入力欄専用のハンドラー（unit_price に税込価格を保存）
   const handleTaxIncludedPriceChange = useCallback(
     (index: number, taxIncludedValue: number) => {
       setItems((prev) =>
@@ -264,7 +262,8 @@ export default function InvoiceForm({
           return {
             ...item,
             taxIncludedInput: taxIncludedValue,
-            // amountはuseEffectで計算するため、ここでは更新しない
+            unit_price: taxIncludedValue, // 税込モード時は unit_price に税込価格を保存
+            // amount は useEffect で計算
           }
         })
       )
