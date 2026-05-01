@@ -75,4 +75,5 @@ export type InvoiceItem = {
   unit: string                      // 式・個・時間など
   unit_price: number
   amount: number                    // quantity × unit_price
+  tax_included: boolean
 }

@@ -11,6 +11,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
+import { Checkbox } from '@/components/ui/checkbox'
 import {
   Select,
   SelectContent,
@@ -18,6 +19,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import { cn } from '@/lib/utils'
 import type { Invoice, InvoiceItem, Client, Settings } from '@/types'
 
 // ==============================
@@ -42,6 +44,8 @@ type ItemRow = {
   unit: string
   unit_price: number
   amount: number        // quantity × unit_price（自動計算・読み取り専用）
+  taxIncluded: boolean
+  taxIncludedInput: number
 }
 
 // コピー作成時に引き継ぐデータの型
@@ -97,6 +101,8 @@ const emptyRow = (): ItemRow => ({
   unit: '式',
   unit_price: 0,
   amount: 0,
+  taxIncluded: false,
+  taxIncludedInput: 0,
 })
 
 // ==============================
@@ -138,6 +144,10 @@ export default function InvoiceForm({
           unit: item.unit,
           unit_price: item.unit_price,
           amount: item.amount,
+          taxIncluded: item.tax_included ?? false,
+          taxIncludedInput: item.tax_included
+            ? Math.round(item.unit_price * 1.1)
+            : item.unit_price,
         }))
     }
     if (copyData?.items && copyData.items.length > 0) {
@@ -145,6 +155,8 @@ export default function InvoiceForm({
       return copyData.items.map((item) => ({
         localId: generateLocalId(),
         ...item,
+        taxIncluded: false,
+        taxIncludedInput: item.unit_price,
       }))
     }
     return [emptyRow()]
@@ -199,14 +211,47 @@ export default function InvoiceForm({
   // map()で「変更済みの新しい配列」を返すことで参照が変わり、
   // Reactが正しく再レンダリングする。
   const handleItemChange = useCallback(
-    (index: number, field: keyof Omit<ItemRow, 'localId' | 'amount'>, value: string | number) => {
+    (
+      index: number,
+      field: keyof Omit<ItemRow, 'localId' | 'amount' | 'taxIncludedInput'>,
+      value: string | number | boolean
+    ) => {
       setItems((prev) =>
         prev.map((item, i) => {
           if (i !== index) return item
           const updated = { ...item, [field]: value }
+
+          // taxIncluded が切り替わった場合の処理
+          if (field === 'taxIncluded') {
+            if (value === true) {
+              updated.taxIncludedInput = Math.round(updated.unit_price * 1.1)
+            } else {
+              updated.taxIncludedInput = updated.unit_price
+            }
+          }
+
           // 数量または単価が変わったら金額を再計算
           updated.amount = updated.quantity * updated.unit_price
           return updated
+        })
+      )
+    },
+    []
+  )
+
+  // 税込入力欄専用のハンドラー（unit_price と taxIncludedInput を同時更新）
+  const handleTaxIncludedPriceChange = useCallback(
+    (index: number, taxIncludedValue: number) => {
+      setItems((prev) =>
+        prev.map((item, i) => {
+          if (i !== index) return item
+          const taxExcludedPrice = Math.floor(taxIncludedValue / 1.1)
+          return {
+            ...item,
+            taxIncludedInput: taxIncludedValue,
+            unit_price: taxExcludedPrice,
+            amount: item.quantity * taxExcludedPrice,
+          }
         })
       )
     },
@@ -334,6 +379,7 @@ export default function InvoiceForm({
         unit: item.unit,
         unit_price: item.unit_price,
         amount: item.amount,
+        tax_included: item.taxIncluded,
       }))
 
       const { error: itemsError } = await supabase
@@ -493,17 +539,48 @@ export default function InvoiceForm({
                       className="h-8 text-sm"
                     />
                   </td>
-                  {/* 単価 */}
+                  {/* 単価（税込入力モード対応） */}
                   <td className="px-3 py-2">
-                    <Input
-                      type="number"
-                      min="0"
-                      value={item.unit_price}
-                      onChange={(e) =>
-                        handleItemChange(index, 'unit_price', parseFloat(e.target.value) || 0)
-                      }
-                      className="h-8 text-sm text-right"
-                    />
+                    <div className="space-y-1">
+                      <Input
+                        type="number"
+                        min="0"
+                        value={item.taxIncluded ? item.taxIncludedInput : item.unit_price}
+                        onChange={(e) => {
+                          const val = parseFloat(e.target.value) || 0
+                          if (item.taxIncluded) {
+                            handleTaxIncludedPriceChange(index, val)
+                          } else {
+                            handleItemChange(index, 'unit_price', val)
+                          }
+                        }}
+                        className={cn(
+                          'h-8 text-sm text-right',
+                          item.taxIncluded && 'bg-amber-50 border-amber-300'
+                        )}
+                      />
+                      <div className="flex items-center gap-1">
+                        <Checkbox
+                          id={`tax-included-${item.localId}`}
+                          checked={item.taxIncluded}
+                          onCheckedChange={(checked) =>
+                            handleItemChange(index, 'taxIncluded', checked === true)
+                          }
+                          className="h-3.5 w-3.5"
+                        />
+                        <label
+                          htmlFor={`tax-included-${item.localId}`}
+                          className="text-xs text-gray-500 cursor-pointer select-none"
+                        >
+                          税込入力
+                        </label>
+                      </div>
+                      {item.taxIncluded && (
+                        <p className="text-xs text-amber-600">
+                          （税抜: ¥{formatCurrency(item.unit_price)}）
+                        </p>
+                      )}
+                    </div>
                   </td>
                   {/* 金額（自動計算・読み取り専用） */}
                   <td className="px-3 py-2 text-right font-medium text-gray-700">
