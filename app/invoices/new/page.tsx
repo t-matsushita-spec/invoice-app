@@ -70,6 +70,8 @@ export default async function NewInvoicePage({ searchParams }: PageProps) {
           unit: item.unit,
           unit_price: item.unit_price,
           amount: item.amount,
+          taxIncluded: item.tax_included ?? false,
+          taxIncludedInput: item.unit_price,
         })),
       }
     }
