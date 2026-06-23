@@ -1,0 +1,47 @@
+name: Supabase Keep-Alive
+
+on:
+  schedule:
+    # 毎日 JST 9:00（UTC 00:00）に実行
+    - cron: '0 0 * * *'
+  workflow_dispatch: # 手動実行用
+
+jobs:
+  keep-alive:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping invoice-app Supabase (REST API)
+        run: |
+          RESPONSE=$(curl -s -o /dev/null -w "%{http_code}" \
+            "https://euyxxjszmfizlxhotnxv.supabase.co/rest/v1/invoices?select=id&limit=1" \
+            -H "apikey: ${{ secrets.INVOICE_SUPABASE_ANON_KEY }}" \
+            -H "Authorization: Bearer ${{ secrets.INVOICE_SUPABASE_ANON_KEY }}")
+          echo "invoice-app REST API: HTTP $RESPONSE"
+          if [ "$RESPONSE" != "200" ] && [ "$RESPONSE" != "400" ] && [ "$RESPONSE" != "401" ]; then
+            echo "WARNING: Unexpected status code $RESPONSE"
+          fi
+
+      - name: Ping invoice-app Supabase (Auth health)
+        run: |
+          RESPONSE=$(curl -s -o /dev/null -w "%{http_code}" \
+            "https://euyxxjszmfizlxhotnxv.supabase.co/auth/v1/health" \
+            -H "apikey: ${{ secrets.INVOICE_SUPABASE_ANON_KEY }}")
+          echo "invoice-app Auth health: HTTP $RESPONSE"
+
+      - name: Ping auto-post Supabase (REST API)
+        run: |
+          RESPONSE=$(curl -s -o /dev/null -w "%{http_code}" \
+            "https://xhnrjkjmgvdmlyzslwxi.supabase.co/rest/v1/posts?select=id&limit=1" \
+            -H "apikey: ${{ secrets.AUTOPOST_SUPABASE_ANON_KEY }}" \
+            -H "Authorization: Bearer ${{ secrets.AUTOPOST_SUPABASE_ANON_KEY }}")
+          echo "auto-post REST API: HTTP $RESPONSE"
+
+      - name: Ping auto-post Supabase (Auth health)
+        run: |
+          RESPONSE=$(curl -s -o /dev/null -w "%{http_code}" \
+            "https://xhnrjkjmgvdmlyzslwxi.supabase.co/auth/v1/health" \
+            -H "apikey: ${{ secrets.AUTOPOST_SUPABASE_ANON_KEY }}")
+          echo "auto-post Auth health: HTTP $RESPONSE"
+
+      - name: Summary
+        run: echo "Keep-alive completed at $(date '+%Y-%m-%d %H:%M:%S UTC')"
