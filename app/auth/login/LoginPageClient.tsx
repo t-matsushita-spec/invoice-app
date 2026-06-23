@@ -53,10 +53,16 @@ export default function LoginPage() {
       })
 
       if (error) {
-        if (error.message.includes('Invalid login credentials')) {
+        const msg = error.message?.toLowerCase() ?? ''
+        if (msg.includes('invalid login credentials')) {
           toast.error('メールアドレスまたはパスワードが正しくありません')
+        } else if (
+          msg.includes('paused') || msg.includes('offline') || msg.includes('unavailable') ||
+          (error as { status?: number }).status === 503
+        ) {
+          toast.error('データベースが一時停止中です。しばらく後に再試行してください')
         } else {
-          toast.error('ログインに失敗しました')
+          toast.error(`ログインに失敗しました（${error.message}）`)
         }
         return
       }
